@@ -106,8 +106,6 @@ def scrape_jobs(page, max_jobs=10):
 
 
 def main():
-    import pdb; pdb.set_trace()
-
     load_dotenv()
     init_db()
     print("Database initialized.")
