@@ -24,7 +24,7 @@ def init_db():
 
 
 def save_job(job_data: dict):
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(config.DB_PATH)
     cursor = conn.cursor()
     try:
         cursor.execute(
@@ -55,7 +55,7 @@ def save_job(job_data: dict):
 
 
 def get_all_jobs():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(config.DB_PATH)
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM jobs ORDER BY scraped_at DESC")
     rows = cursor.fetchall()
@@ -64,7 +64,7 @@ def get_all_jobs():
 
 def update_url():
     jobs = get_all_jobs()
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(config.DB_PATH)
     cursor = conn.cursor()
     for job in jobs:
         url = job[0]
