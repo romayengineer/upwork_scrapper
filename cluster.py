@@ -6,7 +6,7 @@ from sentence_transformers import SentenceTransformer
 from sklearn.cluster import KMeans
 from sklearn.feature_extraction.text import TfidfVectorizer
 from pathlib import Path
-from dotenv import load_dotenv
+from config import CLUSTER_COUNT
 
 DB_PATH = Path(__file__).parent / "jobs.db"
 
@@ -143,9 +143,8 @@ def main(n_clusters: int):
 
 
 if __name__ == "__main__":
-    load_dotenv()
 
-    n_clusters = int(os.getenv("CLUSTER_COUNT"))
+    n_clusters = CLUSTER_COUNT
     if len(sys.argv) > 1:
         try:
             n_clusters = int(sys.argv[1])

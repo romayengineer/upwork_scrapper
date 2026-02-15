@@ -2,23 +2,19 @@ import os
 import sys
 from contextlib import suppress
 from database import init_db, save_job
-from dotenv import load_dotenv
 from playwright._impl._errors import TimeoutError
 from playwright.sync_api import sync_playwright
 from urllib.parse import urlparse
-
-UPWORK_URL = "https://www.upwork.com"
+from config import UPWORK_EMAIL, UPWORK_PASSWORD, UPWORK_URL, USER_DATA_DIR
 
 
 def login(page):
-    email = os.getenv("UPWORK_EMAIL")
-    password = os.getenv("UPWORK_PASSWORD")
 
-    if not email:
+    if not UPWORK_EMAIL:
         print("Error: Please set UPWORK_EMAIL in .env file")
         sys.exit(1)
 
-    if not password:
+    if not UPWORK_PASSWORD:
         print("Error: Please set UPWORK_PASSWORD in .env file")
         sys.exit(1)
 
@@ -31,7 +27,7 @@ def login(page):
         return
     page.locator("#login_password_continue").wait_for(timeout=5000)
 
-    is_gmail = email.lower().endswith("@gmail.com")
+    is_gmail = UPWORK_EMAIL.lower().endswith("@gmail.com")
     if is_gmail is False:
         raise NotImplementedError("Login implemented for gmail only")
     print("Gmail detected. Continuing with Google...")
@@ -41,14 +37,14 @@ def login(page):
         new_page = popup_info.value
         try:
             new_page.locator('input[type="identifier"]').wait_for(timeout=5000)
-            new_page.locator('input[name="identifier"]').fill(email, timeout=5000)
+            new_page.locator('input[name="identifier"]').fill(UPWORK_EMAIL, timeout=5000)
             new_page.get_by_text("Siguiente").click()
             new_page.locator('input[type="password"]').wait_for(timeout=5000)
-            new_page.locator('input[type="password"]').fill(password, timeout=5000)
+            new_page.locator('input[type="password"]').fill(UPWORK_PASSWORD, timeout=5000)
             new_page.get_by_text("Siguiente").click()
             new_page.locator('div > strong:has-text("Sí")').click(timeout=5000)
         except TimeoutError:
-            new_page.locator(f'div[data-email="{email}"]').click(timeout=5000)
+            new_page.locator(f'div[data-email="{UPWORK_EMAIL}"]').click(timeout=5000)
 
     page.locator("#fwh-sidebar-profile").wait_for(timeout=20000)
     print("Login successful!")
@@ -126,12 +122,11 @@ def scrape_jobs(page, max_jobs=20):
 
 
 def main():
-    load_dotenv()
     init_db()
     print("Database initialized.")
 
     with sync_playwright() as p:
-        user_data_dir = os.getenv("USER_DATA_DIR")
+        user_data_dir = USER_DATA_DIR
         context = p.chromium.launch_persistent_context(
             channel="chrome",
             headless=False,
