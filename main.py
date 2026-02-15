@@ -57,6 +57,7 @@ def login(page):
 def title_text(page):
     return locator.title(page).inner_text(timeout=5000)
 
+
 def description_text(page):
     return locator.description(page).inner_text(timeout=5000)
 
@@ -65,6 +66,7 @@ def get_url(page):
     # page url changes on every click of the article
     parse = urlparse(page.url)
     return f"{parse.scheme}://{parse.netloc}{parse.path}"
+
 
 def get_job_url(page):
     parse = urlparse(page.url)

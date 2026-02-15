@@ -4,7 +4,7 @@ import config
 from collections import Counter
 from nltk.corpus import stopwords
 
-STOP_WORDS = stopwords.words('english')
+STOP_WORDS = stopwords.words("english")
 
 
 def get_all_text() -> str:

@@ -62,6 +62,7 @@ def get_all_jobs():
     conn.close()
     return rows
 
+
 def update_url():
     jobs = get_all_jobs()
     conn = sqlite3.connect(config.DB_PATH)
