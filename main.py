@@ -55,9 +55,6 @@ def login(page):
 
 
 def scrape_jobs(page, max_jobs=10):
-    print(f"Navigating to jobs page (max {max_jobs} jobs)...")
-    page.goto(f"{UPWORK_URL}/nx/jobs/search/")
-    page.locator('article[data-test="JobTile"]').first.wait_for(timeout=10000)
 
     jobs = []
     job_cards = page.locator('article[data-test="JobTile"]').all()[:max_jobs]
@@ -65,17 +62,17 @@ def scrape_jobs(page, max_jobs=10):
     for idx, card in enumerate(job_cards):
         try:
             card.click()
-            page.locator('h4 > span').first.wait_for(timeout=5000)
+            page.locator('h4 > span').nth(1).wait_for(timeout=5000)
             page.locator('div[data-test="Description Description"]').first.wait_for(timeout=5000)
             page.locator('h5:has-text("About the client")').wait_for(timeout=5000)
             # page url changes on every click of the article
             parse = urlparse(page.url)
             url = f"{parse.scheme}://{parse.netloc}{parse.path}"
-            title = page.locator('h4 > span').first.inner_text()
+            title = page.locator('h4 > span').nth(1).inner_text()
             description = page.locator('div[data-test="Description Description"]').first.inner_text()
             print(url)
             print(title)
-            print(description)
+            # print(description)
             print()
             page.keyboard.press("Escape")
 
@@ -114,19 +111,30 @@ def main():
         # context = browser.new_context()
         page = context.new_page()
 
-        try:
-            login(page)
-            jobs = scrape_jobs(page)
+        login(page)
 
-            saved_count = 0
-            for job in jobs:
-                if save_job(job):
-                    saved_count += 1
+        max_jobs = 10
+        print(f"Navigating to jobs page (max {max_jobs} jobs)...")
+        page.goto(f"{UPWORK_URL}/nx/search/jobs/?q=python")
 
-            print(f"\nScraping complete! Saved {saved_count} new jobs to database.")
+        while True:
+            try:
+                page.locator('article[data-test="JobTile"]').first.wait_for(timeout=10000)
 
-        except Exception as e:
-            print(f"Error during scraping: {e}")
+                jobs = scrape_jobs(page)
+
+                saved_count = 0
+                for job in jobs:
+                    if save_job(job):
+                        saved_count += 1
+
+                page.locator('li.air3-pagination-item').nth(1).wait_for(timeout=5000)
+                # click next
+                page.locator('li.air3-pagination-item').nth(1).click()
+
+                print(f"\nScraping complete! Saved {saved_count} new jobs to database.")
+            except TimeoutError as e:
+                print(f"Error during scraping: {e}")
 
 
 if __name__ == "__main__":
