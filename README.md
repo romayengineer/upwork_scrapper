@@ -4,15 +4,18 @@ A Python project that uses Playwright to scrape job posts from Upwork and store 
 
 ## Features
 
-- Automated login to Upwork (supports email/password and Google SSO)
-- Scrapes job details including title, description, budget, skills, category, and client info
+- Automated login to Upwork via Google SSO
+- Stealth browser launch to avoid bot detection
+- Uses existing Chrome profile for realistic browsing
+- Scrapes job details from job tiles (title, URL, description)
 - Stores data in SQLite database (`jobs.db`)
 - Prevents duplicate entries using unique URL constraint
 
 ## Requirements
 
 - Python 3.10+
-- Virtual environment (venv)
+- Google Chrome browser installed
+- Chrome profile for login (to avoid bot detection)
 
 ## Setup
 
@@ -35,17 +38,27 @@ A Python project that uses Playwright to scrape job posts from Upwork and store 
 4. **Configure credentials:**
    ```bash
    cp .env.example .env
-   # Edit .env and add your Upwork credentials
+   # Edit .env with your credentials
    ```
 
 ## Environment Variables
 
-| Variable | Description |
-|----------|-------------|
-| `UPWORK_EMAIL` | Your Upwork email address |
-| `UPWORK_PASSWORD` | Your Upwork password |
+Create a `.env` file with:
 
-**Note:** If your email ends with `@gmail.com`, the scraper will redirect you to Google SSO login.
+| Variable | Description | Required |
+|----------|-------------|----------|
+| `UPWORK_EMAIL` | Your Upwork email (@gmail.com only) | Yes |
+| `UPWORK_PASSWORD` | Your Upwork password | Yes |
+| `USER_DATA_DIR` | Path to Chrome profile | Yes |
+
+**To get Chrome profile path on macOS:**
+```bash
+ls ~/Library/Application\ Support/Google/Chrome/
+```
+Use a path like:
+```
+/Users/yourname/Library/Application Support/Google/Chrome/Default
+```
 
 ## Usage
 
@@ -55,26 +68,37 @@ python main.py
 
 The scraper will:
 1. Initialize the SQLite database
-2. Log you into Upwork (opens browser window)
-3. Navigate to jobs search page
-4. Scrape job details and store them in `jobs.db`
+2. Open Chrome with your existing profile
+3. Navigate to Upwork login page
+4. If already logged in, skip login; otherwise, complete Google SSO
+5. Navigate to jobs search page
+6. Click each job tile to get full details (URL changes on click)
+7. Extract title, description, and URL
+8. Store scraped jobs in `jobs.db`
 
 ## Database Schema
 
 The `jobs` table contains:
 
-| Column | Description |
-|--------|-------------|
-| `id` | Primary key |
-| `url` | Unique job URL |
-| `title` | Job title |
-| `description` | Job description |
-| `budget` | Job budget |
-| `skills` | Required skills (comma-separated) |
-| `category` | Job category |
-| `posted_at` | When the job was posted |
-| `client_info` | Client information |
-| `scraped_at` | Timestamp when job was scraped |
+| Column | Type | Description |
+|--------|------|-------------|
+| `url` | TEXT PRIMARY KEY | Unique job URL |
+| `title` | TEXT | Job title |
+| `description` | TEXT | Full job description |
+| `budget` | TEXT | Job budget (not currently scraped) |
+| `skills` | TEXT | Required skills (not currently scraped) |
+| `category` | TEXT | Job category (not currently scraped) |
+| `posted_at` | TEXT | When job was posted (not currently scraped) |
+| `client_info` | TEXT | Client information (not currently scraped) |
+| `scraped_at` | TEXT | Timestamp when job was scraped (ISO format) |
+
+## Stealth Features
+
+The browser launches with these arguments to avoid detection:
+- `--disable-blink-features=AutomationControlled` - Hides automation flags
+- `--disable-infobars` - Removes automation warning banner
+- `--disable-dev-shm-usage` - Better stability
+- Uses persistent Chrome context with existing user profile
 
 ## Project Structure
 
@@ -85,11 +109,14 @@ The `jobs` table contains:
 ├── requirements.txt  # Python dependencies
 ├── .env              # Environment variables (credentials)
 ├── .env.example      # Example environment file
-└── jobs.db           # SQLite database (created on first run)
+├── jobs.db           # SQLite database (created on first run)
+└── README.md         # This file
 ```
 
 ## Notes
 
-- The browser runs in non-headless mode so you can complete 2FA if needed
-- Upwork may change their DOM structure; you may need to update selectors in `main.py`
-- The scraper defaults to scraping 10 jobs. Modify `max_jobs` parameter in `scrape_jobs()` to change this
+- Currently only supports Gmail/Google SSO login
+- Browser runs in non-headless mode using your Chrome profile
+- The scraper clicks each job tile to get the full URL (Upwork loads details dynamically)
+- Press `Escape` to close job details popup after each scrape
+- Default scrapes 10 jobs. Modify `max_jobs` parameter in `scrape_jobs()` to change this
