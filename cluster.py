@@ -1,9 +1,12 @@
+import os
+import sys
 import sqlite3
 import numpy as np
 from sentence_transformers import SentenceTransformer
 from sklearn.cluster import KMeans
 from sklearn.feature_extraction.text import TfidfVectorizer
 from pathlib import Path
+from dotenv import load_dotenv
 
 DB_PATH = Path(__file__).parent / "jobs.db"
 
@@ -34,7 +37,7 @@ def generate_embeddings(texts: list[str]) -> np.ndarray:
     return embeddings
 
 
-def cluster_jobs(embeddings: np.ndarray, n_clusters: int = 8) -> tuple:
+def cluster_jobs(embeddings: np.ndarray, n_clusters: int) -> tuple:
     print(f"Clustering into {n_clusters} groups...")
     kmeans = KMeans(n_clusters=n_clusters, random_state=42, n_init=10)
     labels = kmeans.fit_predict(embeddings)
@@ -119,7 +122,7 @@ def print_summary(jobs: list[tuple], clusters: np.ndarray, keywords: dict):
             print(f"  ... and {len(cluster_indices) - 3} more")
 
 
-def main(n_clusters: int = 8):
+def main(n_clusters: int):
     print(f"Starting job clustering with {n_clusters} clusters...\n")
 
     jobs = get_jobs()
@@ -140,9 +143,9 @@ def main(n_clusters: int = 8):
 
 
 if __name__ == "__main__":
-    import sys
+    load_dotenv()
 
-    n_clusters = 8
+    n_clusters = int(os.getenv("CLUSTER_COUNT"))
     if len(sys.argv) > 1:
         try:
             n_clusters = int(sys.argv[1])
