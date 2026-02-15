@@ -10,10 +10,9 @@ def init_db():
     cursor = conn.cursor()
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS jobs (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            url TEXT UNIQUE NOT NULL,
-            title TEXT,
-            description TEXT,
+            url TEXT PRIMARY KEY NOT NULL,
+            title TEXT NOT NULL,
+            description TEXT NOT NULL,
             budget TEXT,
             skills TEXT,
             category TEXT,
