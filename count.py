@@ -1,14 +1,14 @@
 import sqlite3
 import re
+import config
 from collections import Counter
 from nltk.corpus import stopwords
-from config import DB_PATH
 
 STOP_WORDS = stopwords.words('english')
 
 
 def get_all_text() -> str:
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(config.DB_PATH)
     cursor = conn.cursor()
     cursor.execute("SELECT title, description FROM jobs")
     rows = cursor.fetchall()

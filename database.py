@@ -1,10 +1,10 @@
 import sqlite3
+import config
 from datetime import datetime
-from config import DB_PATH
 
 
 def init_db():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(config.DB_PATH)
     cursor = conn.cursor()
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS jobs (

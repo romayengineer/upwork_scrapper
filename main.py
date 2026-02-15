@@ -1,34 +1,34 @@
 import sys
+import config
+import locator
 from contextlib import suppress
 from database import init_db, save_job
 from playwright._impl._errors import TimeoutError
 from playwright.sync_api import sync_playwright
 from urllib.parse import urlparse, parse_qs
-import locator
-from config import UPWORK_EMAIL, UPWORK_PASSWORD, USER_DATA_DIR, LOGIN_URL, SEARCH_URL, MAX_PAGE_NUMBER
 
 
 def login(page):
 
-    if not UPWORK_EMAIL:
-        print("Error: Please set UPWORK_EMAIL in .env file")
+    if not config.UPWORK_EMAIL:
+        print("Error: Please set config.UPWORK_EMAIL in .env file")
         sys.exit(1)
 
-    if not UPWORK_PASSWORD:
-        print("Error: Please set UPWORK_PASSWORD in .env file")
+    if not config.UPWORK_PASSWORD:
+        print("Error: Please set config.UPWORK_PASSWORD in .env file")
         sys.exit(1)
 
     print("Logging in to Upwork...")
 
-    page.goto(LOGIN_URL)
-    if page.url != LOGIN_URL:
+    page.goto(config.LOGIN_URL)
+    if page.url != config.LOGIN_URL:
         locator.profile(page).wait_for(timeout=20000)
         print("already login")
         return
 
     locator.button_continue(page).wait_for(timeout=5000)
 
-    is_gmail = UPWORK_EMAIL.lower().endswith("@gmail.com")
+    is_gmail = config.UPWORK_EMAIL.lower().endswith("@gmail.com")
     if is_gmail is False:
         raise NotImplementedError("Login implemented for gmail only")
 
@@ -40,10 +40,10 @@ def login(page):
         new_page = popup_info.value
         try:
             locator.input_email(new_page).wait_for(timeout=20000)
-            locator.input_email(new_page).fill(UPWORK_EMAIL, timeout=5000)
+            locator.input_email(new_page).fill(config.UPWORK_EMAIL, timeout=5000)
             new_page.get_by_text("Siguiente").click()
             locator.input_password(new_page).wait_for(timeout=5000)
-            locator.input_password(new_page).fill(UPWORK_PASSWORD, timeout=5000)
+            locator.input_password(new_page).fill(config.UPWORK_PASSWORD, timeout=5000)
             new_page.get_by_text("Siguiente").click()
             locator.select_device(new_page).click(timeout=5000)
         except TimeoutError:
@@ -122,11 +122,10 @@ def main():
     print("Database initialized.")
 
     with sync_playwright() as p:
-        user_data_dir = USER_DATA_DIR
         context = p.chromium.launch_persistent_context(
             channel="chrome",
             headless=False,
-            user_data_dir=user_data_dir,
+            user_data_dir=config.USER_DATA_DIE,
             args=[
                 "--disable-blink-features=AutomationControlled",
                 "--disable-infobars",
@@ -140,7 +139,7 @@ def main():
 
         max_jobs = 10
         print(f"Navigating to jobs page (max {max_jobs} jobs)...")
-        page.goto(f"{SEARCH_URL}/?q=python")
+        page.goto(f"{config.SEARCH_URL}/?q=python")
 
         saved_count = 0
 
@@ -148,7 +147,7 @@ def main():
             try:
                 page_num = get_page_number(page)
 
-                if page_num and page_num >= MAX_PAGE_NUMBER + 1:
+                if page_num and page_num >= config.MAX_PAGE_NUMBER + 1:
                     print("process finished")
                     return
 
@@ -162,7 +161,7 @@ def main():
 
                 locator.button_next(page).wait_for(timeout=5000)
                 # click next
-                locator.button_next(page).nth(1).click()
+                locator.button_next(page).click()
 
                 print(f"\nPage {page_num} Saved {saved_count} new jobs to database.")
             except TimeoutError as e:

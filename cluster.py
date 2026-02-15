@@ -1,15 +1,14 @@
-import os
 import sys
 import sqlite3
 import numpy as np
+import config
 from sentence_transformers import SentenceTransformer
 from sklearn.cluster import KMeans
 from sklearn.feature_extraction.text import TfidfVectorizer
-from config import CLUSTER_COUNT, DB_PATH
 
 
 def get_jobs() -> list[tuple[str, str, str]]:
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(config.DB_PATH)
     cursor = conn.cursor()
     cursor.execute("SELECT url, title, description FROM jobs")
     rows = cursor.fetchall()
@@ -78,7 +77,7 @@ def get_cluster_keywords(
 
 def update_categories(jobs: list[tuple], clusters: np.ndarray, keywords: dict):
     print("Updating database with categories...")
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(config.DB_PATH)
     cursor = conn.cursor()
 
     count = 0
@@ -141,7 +140,7 @@ def main(n_clusters: int):
 
 if __name__ == "__main__":
 
-    n_clusters = CLUSTER_COUNT
+    n_clusters = config.CLUSTER_COUNT
     if len(sys.argv) > 1:
         try:
             n_clusters = int(sys.argv[1])

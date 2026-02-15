@@ -1,4 +1,4 @@
-from config import UPWORK_EMAIL
+import config
 
 
 class Incomplete(Exception):
@@ -24,7 +24,7 @@ def select_device(page):
     return page.locator('div > strong:has-text("Sí")')
 
 def select_google_account(page):
-    return page.locator(f'div[data-email="{UPWORK_EMAIL}"]')
+    return page.locator(f'div[data-email="{config.UPWORK_EMAIL}"]')
 
 def client(page):
     return page.locator('h5:has-text("About the client")').first
