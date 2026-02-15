@@ -145,3 +145,9 @@ The browser launches with these arguments to avoid detection:
 - The scraper clicks each job tile to get the full URL (Upwork loads details dynamically)
 - Press `Escape` to close job details popup after each scrape
 - Default scrapes 10 jobs per page. Modify `max_jobs` in `scrape_jobs()` to change this
+
+## Performance
+
+for 10 pages it takes ~6 minutes
+
+python main.py  128,95s user 51,27s system 50% cpu 5:53,85 total
