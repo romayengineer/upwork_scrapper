@@ -6,7 +6,7 @@ A Python project that uses Playwright to scrape job posts from Upwork, stores th
 
 - **Automated Job Scraping**: Scrapes job posts from Upwork with title, URL, and description
 - **Google SSO Login**: Automated login via Gmail (upwork.com/@gmail.com accounts)
-- **Pagination Support**: Automatically navigates through multiple pages
+- **Pagination Support**: Automatically navigates through multiple pages (configurable limit)
 - **Stealth Browser**: Uses existing Chrome profile to avoid bot detection
 - **Word Frequency Analysis**: Count and analyze common words across all jobs
 - **Job Clustering**: Auto-categorize jobs using sentence embeddings and machine learning
@@ -55,7 +55,8 @@ Create a `.env` file with:
 | `UPWORK_EMAIL` | Your Upwork email (@gmail.com only) | Yes |
 | `UPWORK_PASSWORD` | Your Upwork password | Yes |
 | `USER_DATA_DIR` | Path to Chrome profile | Yes |
-| `CLUSTER_COUNT` | Number of clusters for job categorization (default: 8) | No |
+| `CLUSTER_COUNT` | Number of clusters for job categorization | Yes |
+| `MAX_PAGE_NUMBER` | Maximum number of pages to scrape | Yes |
 
 **To get Chrome profile path on macOS:**
 ```bash
@@ -75,7 +76,7 @@ python main.py
 - Opens Chrome with your existing profile
 - Logs in via Google SSO if not already logged in
 - Searches for "python" jobs
-- Navigates through pages automatically
+- Navigates through pages automatically until `MAX_PAGE_NUMBER` is reached
 - Stores jobs in `jobs.db`
 
 ### Word Frequency Analysis
@@ -89,8 +90,8 @@ python count.py
 
 ### Job Clustering
 ```bash
-python cluster.py              # Default 8 clusters
-python cluster.py 12           # Custom cluster count
+python cluster.py              # Uses CLUSTER_COUNT from config
+python cluster.py 12           # Override with custom cluster count
 ```
 - Uses sentence-transformers (all-MiniLM-L6-v2) for semantic embeddings
 - Clusters jobs using K-Means algorithm
@@ -119,6 +120,7 @@ The `jobs` table contains:
 ```
 .
 ├── main.py           # Job scraping script
+├── config.py         # Centralized configuration
 ├── database.py       # SQLite database operations
 ├── count.py          # Word frequency analysis
 ├── cluster.py        # Job clustering with ML
@@ -144,10 +146,9 @@ The browser launches with these arguments to avoid detection:
 - Default search query is "python" (hardcoded in main.py)
 - The scraper clicks each job tile to get the full URL (Upwork loads details dynamically)
 - Press `Escape` to close job details popup after each scrape
-- Default scrapes 10 jobs per page. Modify `max_jobs` in `scrape_jobs()` to change this
+- Scraping stops after reaching `MAX_PAGE_NUMBER` pages
 
 ## Performance
 
-for 10 pages it takes ~6 minutes
-
-python main.py  128,95s user 51,27s system 50% cpu 5:53,85 total
+- ~6 minutes for 10 pages
+- Time varies based on network speed and page load times
