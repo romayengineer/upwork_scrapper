@@ -1,6 +1,7 @@
 import os
 import sys
 from contextlib import suppress
+from urllib.parse import urlparse
 from database import init_db, save_job
 from dotenv import load_dotenv
 from playwright._impl._errors import TimeoutError
@@ -22,7 +23,12 @@ def login(page):
         sys.exit(1)
 
     print("Logging in to Upwork...")
-    page.goto(f"{UPWORK_URL}/ab/account-security/login")
+    login_url = f"{UPWORK_URL}/ab/account-security/login"
+    page.goto(login_url)
+    if page.url != login_url:
+        page.locator("#fwh-sidebar-profile").wait_for(timeout=20000)
+        print("already login")
+        return
     page.locator("#login_password_continue").wait_for(timeout=5000)
 
     is_gmail = email.lower().endswith("@gmail.com")
@@ -44,57 +50,39 @@ def login(page):
         except TimeoutError:
             new_page.locator(f'div[data-email="{email}"]').click(timeout=5000)
 
-    page.locator("#fwh-sidebar-profile").wait_for(timeout=5000)
+    page.locator("#fwh-sidebar-profile").wait_for(timeout=20000)
     print("Login successful!")
 
 
 def scrape_jobs(page, max_jobs=10):
     print(f"Navigating to jobs page (max {max_jobs} jobs)...")
     page.goto(f"{UPWORK_URL}/nx/jobs/search/")
+    page.locator('article[data-test="JobTile"]').first.wait_for(timeout=10000)
 
     jobs = []
-    job_cards = page.locator('section[data-test="job-tile"]').all()[:max_jobs]
+    job_cards = page.locator('article[data-test="JobTile"]').all()[:max_jobs]
 
     for idx, card in enumerate(job_cards):
         try:
-            title_elem = card.locator('a[data-test="job-title"]')
-            title = title_elem.inner_text() if title_elem.count() > 0 else ""
-            url = title_elem.get_attribute("href") if title_elem.count() > 0 else ""
-
-            if url and not url.startswith("http"):
-                url = UPWORK_URL + url
-
-            desc_elem = card.locator('div[data-test="job-description"]')
-            description = desc_elem.inner_text() if desc_elem.count() > 0 else ""
-
-            budget_elem = card.locator('span[data-test="budget"]')
-            budget = budget_elem.inner_text() if budget_elem.count() > 0 else ""
-
-            skills_elem = card.locator('span[data-test="skill-name"]')
-            skills = (
-                ", ".join([s.inner_text() for s in skills_elem.all()])
-                if skills_elem.count() > 0
-                else ""
-            )
-
-            category_elem = card.locator('span[data-test="category"]')
-            category = category_elem.inner_text() if category_elem.count() > 0 else ""
-
-            posted_elem = card.locator('span[data-test="posted-on"]')
-            posted_at = posted_elem.inner_text() if posted_elem.count() > 0 else ""
-
-            client_elem = card.locator('span[data-test="client-info"]')
-            client_info = client_elem.inner_text() if client_elem.count() > 0 else ""
+            card.click()
+            page.locator('h4 > span').first.wait_for(timeout=5000)
+            page.locator('div[data-test="Description Description"]').first.wait_for(timeout=5000)
+            page.locator('h5:has-text("About the client")').wait_for(timeout=5000)
+            # page url changes on every click of the article
+            parse = urlparse(page.url)
+            url = f"{parse.scheme}://{parse.netloc}{parse.path}"
+            title = page.locator('h4 > span').first.inner_text()
+            description = page.locator('div[data-test="Description Description"]').first.inner_text()
+            print(url)
+            print(title)
+            print(description)
+            print()
+            page.keyboard.press("Escape")
 
             job_data = {
                 "url": url,
                 "title": title,
                 "description": description,
-                "budget": budget,
-                "skills": skills,
-                "category": category,
-                "posted_at": posted_at,
-                "client_info": client_info,
             }
             jobs.append(job_data)
             print(f"Scraped job {idx + 1}: {title[:50]}...")
