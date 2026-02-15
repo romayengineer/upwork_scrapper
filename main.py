@@ -4,6 +4,7 @@ from database import init_db, save_job
 from playwright._impl._errors import TimeoutError
 from playwright.sync_api import sync_playwright
 from urllib.parse import urlparse, parse_qs
+import locator
 from config import UPWORK_EMAIL, UPWORK_PASSWORD, USER_DATA_DIR, LOGIN_URL, SEARCH_URL, MAX_PAGE_NUMBER
 
 
@@ -21,11 +22,11 @@ def login(page):
 
     page.goto(LOGIN_URL)
     if page.url != LOGIN_URL:
-        page.locator("#fwh-sidebar-profile").wait_for(timeout=20000)
+        locator.profile(page).wait_for(timeout=20000)
         print("already login")
         return
 
-    page.locator("#login_password_continue").wait_for(timeout=5000)
+    locator.button_continue(page).wait_for(timeout=5000)
 
     is_gmail = UPWORK_EMAIL.lower().endswith("@gmail.com")
     if is_gmail is False:
@@ -35,45 +36,29 @@ def login(page):
     print("Google sign-in flow opened.")
 
     with page.expect_popup() as popup_info:
-        page.locator("#login_google_submit").click()
+        locator.button_login_google(page).click()
         new_page = popup_info.value
         try:
-            new_page.locator('input[type="identifier"]').wait_for(timeout=5000)
-            new_page.locator('input[name="identifier"]').fill(UPWORK_EMAIL, timeout=5000)
+            locator.input_email(new_page).wait_for(timeout=20000)
+            locator.input_email(new_page).fill(UPWORK_EMAIL, timeout=5000)
             new_page.get_by_text("Siguiente").click()
-            new_page.locator('input[type="password"]').wait_for(timeout=5000)
-            new_page.locator('input[type="password"]').fill(UPWORK_PASSWORD, timeout=5000)
+            locator.input_password(new_page).wait_for(timeout=5000)
+            locator.input_password(new_page).fill(UPWORK_PASSWORD, timeout=5000)
             new_page.get_by_text("Siguiente").click()
-            new_page.locator('div > strong:has-text("Sí")').click(timeout=5000)
+            locator.select_device(new_page).click(timeout=5000)
         except TimeoutError:
-            new_page.locator(f'div[data-email="{UPWORK_EMAIL}"]').click(timeout=5000)
+            locator.select_google_account(new_page).click(timeout=5000)
 
-    page.locator("#fwh-sidebar-profile").wait_for(timeout=20000)
+    locator.profile(page).wait_for(timeout=20000)
 
     print("Login successful!")
 
 
-class Incomplete(Exception):
-    pass
-
-def locator_client(page):
-    return page.locator('h5:has-text("About the client")').first
-
-def description_locator(page):
-    return page.locator('div[data-test="Description Description"]').first
+def title_text(page):
+    return locator.title(page).inner_text(timeout=5000)
 
 def description_text(page):
-    return description_locator(page).inner_text(timeout=5000)
-
-def title_locator(page):
-    for e in page.locator('h4').all():
-        text = e.inner_text(timeout=5000)
-        if "Featured" not in text:
-            return e
-    raise Incomplete("no title found")
-
-def title_text(page):
-    return title_locator(page).inner_text()
+    return locator.description(page).inner_text(timeout=5000)
 
 
 def get_url(page):
@@ -92,17 +77,17 @@ def get_job_url(page):
 def scrape_jobs(page, max_jobs=20):
 
     jobs = []
-    job_cards = page.locator('article[data-test="JobTile"]').all()[:max_jobs]
+    job_cards = locator.jobs(page).all()[:max_jobs]
 
     for card in job_cards:
         try:
             card.click()
-            with suppress(TimeoutError, Incomplete):
-                title_locator(page).wait_for(timeout=5000)
+            with suppress(TimeoutError, locator.Incomplete):
+                locator.title(page).wait_for(timeout=5000)
             with suppress(TimeoutError):
-                description_locator(page).wait_for(timeout=5000)
+                locator.description(page).wait_for(timeout=5000)
             with suppress(TimeoutError):
-                locator_client(page).wait_for(timeout=5000)
+                locator.client(page).wait_for(timeout=5000)
             url = get_job_url(page)
             title = title_text(page)
             description = description_text(page)
@@ -116,7 +101,7 @@ def scrape_jobs(page, max_jobs=20):
             }
             jobs.append(job_data)
             page.keyboard.press("Escape")
-        except (TimeoutError, Incomplete) as e:
+        except (TimeoutError, locator.Incomplete) as e:
             print(f"Error scraping job: {e}")
             page.keyboard.press("Escape")
             continue
@@ -167,7 +152,7 @@ def main():
                     print("process finished")
                     return
 
-                page.locator('article[data-test="JobTile"]').first.wait_for(timeout=15000)
+                locator.jobs(page).first.wait_for(timeout=20000)
 
                 jobs = scrape_jobs(page)
 
@@ -175,9 +160,9 @@ def main():
                     if save_job(job):
                         saved_count += 1
 
-                page.locator('li.air3-pagination-item').nth(1).wait_for(timeout=5000)
+                locator.button_next(page).wait_for(timeout=5000)
                 # click next
-                page.locator('li.air3-pagination-item').nth(1).click()
+                locator.button_next(page).nth(1).click()
 
                 print(f"\nPage {page_num} Saved {saved_count} new jobs to database.")
             except TimeoutError as e:
