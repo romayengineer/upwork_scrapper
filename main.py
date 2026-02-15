@@ -1,11 +1,10 @@
 import os
 import sys
-from dotenv import load_dotenv
 from contextlib import suppress
-from playwright.sync_api import sync_playwright
-from playwright._impl._errors import TimeoutError
-
 from database import init_db, save_job
+from dotenv import load_dotenv
+from playwright._impl._errors import TimeoutError
+from playwright.sync_api import sync_playwright
 
 UPWORK_URL = "https://www.upwork.com"
 
@@ -24,18 +23,24 @@ def login(page):
 
     print("Logging in to Upwork...")
     page.goto(f"{UPWORK_URL}/ab/account-security/login")
+    import pdb; pdb.set_trace()
     with suppress(TimeoutError):
-        page.wait_for_load_state("networkidle")
-
-    page.fill('input[name="login[username]"]', email)
+        page.locator("#login_password_continue").wait_for(timeout=5000)
 
     is_gmail = email.lower().endswith("@gmail.com")
     if is_gmail:
         print("Gmail detected. Continuing with Google...")
-        page.get_by_role("button", name="Continue with Google").click()
-        page.wait_for_load_state("networkidle")
         print("Google sign-in flow opened.")
-        return
+        with page.expect_popup() as popup_info:
+            page.locator("#login_google_submit").click()
+            new_page = popup_info.value
+            with suppress(TimeoutError):
+                new_page.locator('input[name="identifier"]').fill(email, timeout=5000)
+                new_page.get_by_text("Siguiente").click()
+    else:
+        page.locator('#login_username').fill(email)
+        page.locator("#login_password_continue").click()
+
 
     page.click('button[type="submit"]')
     page.wait_for_load_state("networkidle")
@@ -111,8 +116,14 @@ def main():
     print("Database initialized.")
 
     with sync_playwright() as p:
-        browser = p.chromium.launch(channel="chrome", headless=False)
-        context = browser.new_context()
+        user_data_dir = os.getenv("USER_DATA_DIR")
+        import pdb; pdb.set_trace()
+        context = p.chromium.launch_persistent_context(
+            channel="chrome",
+            headless=False,
+            user_data_dir=user_data_dir,
+        )
+        # context = browser.new_context()
         page = context.new_page()
 
         try:
@@ -128,8 +139,6 @@ def main():
 
         except Exception as e:
             print(f"Error during scraping: {e}")
-        finally:
-            browser.close()
 
 
 if __name__ == "__main__":
