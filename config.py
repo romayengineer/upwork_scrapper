@@ -20,4 +20,6 @@ USER_DATA_DIR = os.getenv("USER_DATA_DIR")
 
 CLUSTER_COUNT = int(os.getenv("CLUSTER_COUNT"))
 
+MAX_PAGE_NUMBER = int(os.getenv("MAX_PAGE_NUMBER"))
+
 DB_PATH = Path(__file__).parent / "jobs.db"

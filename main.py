@@ -3,8 +3,8 @@ from contextlib import suppress
 from database import init_db, save_job
 from playwright._impl._errors import TimeoutError
 from playwright.sync_api import sync_playwright
-from urllib.parse import urlparse
-from config import UPWORK_EMAIL, UPWORK_PASSWORD, USER_DATA_DIR, LOGIN_URL, SEARCH_URL
+from urllib.parse import urlparse, parse_qs
+from config import UPWORK_EMAIL, UPWORK_PASSWORD, USER_DATA_DIR, LOGIN_URL, SEARCH_URL, MAX_PAGE_NUMBER
 
 
 def login(page):
@@ -124,6 +124,14 @@ def scrape_jobs(page, max_jobs=20):
     return jobs
 
 
+def get_page_number(page):
+    parsed = urlparse(page.url)
+    params = dict(parse_qs(parsed.query))
+    page_num = params.get("page")
+    with suppress(ValueError, TypeError):
+        return int(page_num[0])
+
+
 def main():
     init_db()
     print("Database initialized.")
@@ -153,6 +161,12 @@ def main():
 
         while True:
             try:
+                page_num = get_page_number(page)
+
+                if page_num and page_num >= MAX_PAGE_NUMBER + 1:
+                    print("process finished")
+                    return
+
                 page.locator('article[data-test="JobTile"]').first.wait_for(timeout=15000)
 
                 jobs = scrape_jobs(page)
@@ -165,7 +179,7 @@ def main():
                 # click next
                 page.locator('li.air3-pagination-item').nth(1).click()
 
-                print(f"\nSaved {saved_count} new jobs to database.")
+                print(f"\nPage {page_num} Saved {saved_count} new jobs to database.")
             except TimeoutError as e:
                 print(f"Error during scraping: {e}")
 
