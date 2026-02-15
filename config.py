@@ -8,6 +8,10 @@ load_dotenv()
 
 UPWORK_URL = "https://www.upwork.com"
 
+LOGIN_URL = f"{UPWORK_URL}/ab/account-security/login"
+
+SEARCH_URL = f"{UPWORK_URL}/nx/search/jobs"
+
 UPWORK_EMAIL = os.getenv("UPWORK_EMAIL")
 
 UPWORK_PASSWORD = os.getenv("UPWORK_PASSWORD")

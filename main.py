@@ -1,11 +1,10 @@
-import os
 import sys
 from contextlib import suppress
 from database import init_db, save_job
 from playwright._impl._errors import TimeoutError
 from playwright.sync_api import sync_playwright
 from urllib.parse import urlparse
-from config import UPWORK_EMAIL, UPWORK_PASSWORD, UPWORK_URL, USER_DATA_DIR
+from config import UPWORK_EMAIL, UPWORK_PASSWORD, USER_DATA_DIR, LOGIN_URL, SEARCH_URL
 
 
 def login(page):
@@ -19,19 +18,22 @@ def login(page):
         sys.exit(1)
 
     print("Logging in to Upwork...")
-    login_url = f"{UPWORK_URL}/ab/account-security/login"
-    page.goto(login_url)
-    if page.url != login_url:
+
+    page.goto(LOGIN_URL)
+    if page.url != LOGIN_URL:
         page.locator("#fwh-sidebar-profile").wait_for(timeout=20000)
         print("already login")
         return
+
     page.locator("#login_password_continue").wait_for(timeout=5000)
 
     is_gmail = UPWORK_EMAIL.lower().endswith("@gmail.com")
     if is_gmail is False:
         raise NotImplementedError("Login implemented for gmail only")
+
     print("Gmail detected. Continuing with Google...")
     print("Google sign-in flow opened.")
+
     with page.expect_popup() as popup_info:
         page.locator("#login_google_submit").click()
         new_page = popup_info.value
@@ -47,6 +49,7 @@ def login(page):
             new_page.locator(f'div[data-email="{UPWORK_EMAIL}"]').click(timeout=5000)
 
     page.locator("#fwh-sidebar-profile").wait_for(timeout=20000)
+
     print("Login successful!")
 
 
@@ -144,7 +147,7 @@ def main():
 
         max_jobs = 10
         print(f"Navigating to jobs page (max {max_jobs} jobs)...")
-        page.goto(f"{UPWORK_URL}/nx/search/jobs/?q=python")
+        page.goto(f"{SEARCH_URL}/?q=python")
 
         saved_count = 0
 
