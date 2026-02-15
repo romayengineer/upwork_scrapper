@@ -155,7 +155,7 @@ def main():
 
         while True:
             try:
-                page.locator('article[data-test="JobTile"]').first.wait_for(timeout=5000)
+                page.locator('article[data-test="JobTile"]').first.wait_for(timeout=15000)
 
                 jobs = scrape_jobs(page)
 
