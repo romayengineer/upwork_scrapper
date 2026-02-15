@@ -1,10 +1,8 @@
 import sqlite3
 import re
 from collections import Counter
-from pathlib import Path
 from nltk.corpus import stopwords
-
-DB_PATH = Path(__file__).parent / "jobs.db"
+from config import DB_PATH
 
 STOP_WORDS = stopwords.words('english')
 

@@ -5,10 +5,7 @@ import numpy as np
 from sentence_transformers import SentenceTransformer
 from sklearn.cluster import KMeans
 from sklearn.feature_extraction.text import TfidfVectorizer
-from pathlib import Path
-from config import CLUSTER_COUNT
-
-DB_PATH = Path(__file__).parent / "jobs.db"
+from config import CLUSTER_COUNT, DB_PATH
 
 
 def get_jobs() -> list[tuple[str, str, str]]:
