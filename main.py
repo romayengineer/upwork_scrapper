@@ -23,38 +23,34 @@ def login(page):
 
     print("Logging in to Upwork...")
     page.goto(f"{UPWORK_URL}/ab/account-security/login")
-    import pdb; pdb.set_trace()
-    with suppress(TimeoutError):
-        page.locator("#login_password_continue").wait_for(timeout=5000)
+    page.locator("#login_password_continue").wait_for(timeout=5000)
 
     is_gmail = email.lower().endswith("@gmail.com")
-    if is_gmail:
-        print("Gmail detected. Continuing with Google...")
-        print("Google sign-in flow opened.")
-        with page.expect_popup() as popup_info:
-            page.locator("#login_google_submit").click()
-            new_page = popup_info.value
-            with suppress(TimeoutError):
-                new_page.locator('input[name="identifier"]').fill(email, timeout=5000)
-                new_page.get_by_text("Siguiente").click()
-    else:
-        page.locator('#login_username').fill(email)
-        page.locator("#login_password_continue").click()
+    if is_gmail is False:
+        raise NotImplementedError("Login implemented for gmail only")
+    print("Gmail detected. Continuing with Google...")
+    print("Google sign-in flow opened.")
+    with page.expect_popup() as popup_info:
+        page.locator("#login_google_submit").click()
+        new_page = popup_info.value
+        try:
+            new_page.locator('input[type="identifier"]').wait_for(timeout=5000)
+            new_page.locator('input[name="identifier"]').fill(email, timeout=5000)
+            new_page.get_by_text("Siguiente").click()
+            new_page.locator('input[type="password"]').wait_for(timeout=5000)
+            new_page.locator('input[type="password"]').fill(password, timeout=5000)
+            new_page.get_by_text("Siguiente").click()
+            new_page.locator('div > strong:has-text("Sí")').click(timeout=5000)
+        except TimeoutError:
+            new_page.locator(f'div[data-email="{email}"]').click(timeout=5000)
 
-
-    page.click('button[type="submit"]')
-    page.wait_for_load_state("networkidle")
-
-    page.fill('input[name="login[password]"]', password)
-    page.click('button[type="submit"]')
-    page.wait_for_load_state("networkidle")
+    page.locator("#fwh-sidebar-profile").wait_for(timeout=5000)
     print("Login successful!")
 
 
 def scrape_jobs(page, max_jobs=10):
     print(f"Navigating to jobs page (max {max_jobs} jobs)...")
     page.goto(f"{UPWORK_URL}/nx/jobs/search/")
-    page.wait_for_load_state("networkidle")
 
     jobs = []
     job_cards = page.locator('section[data-test="job-tile"]').all()[:max_jobs]
@@ -117,11 +113,15 @@ def main():
 
     with sync_playwright() as p:
         user_data_dir = os.getenv("USER_DATA_DIR")
-        import pdb; pdb.set_trace()
         context = p.chromium.launch_persistent_context(
             channel="chrome",
             headless=False,
             user_data_dir=user_data_dir,
+            args=[
+                "--disable-blink-features=AutomationControlled",
+                "--disable-infobars",
+                "--disable-dev-shm-usage",
+            ],
         )
         # context = browser.new_context()
         page = context.new_page()
