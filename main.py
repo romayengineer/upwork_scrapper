@@ -1,11 +1,11 @@
 import os
 import sys
 from contextlib import suppress
-from urllib.parse import urlparse
 from database import init_db, save_job
 from dotenv import load_dotenv
 from playwright._impl._errors import TimeoutError
 from playwright.sync_api import sync_playwright
+from urllib.parse import urlparse
 
 UPWORK_URL = "https://www.upwork.com"
 
@@ -82,6 +82,13 @@ def get_url(page):
     parse = urlparse(page.url)
     return f"{parse.scheme}://{parse.netloc}{parse.path}"
 
+def get_job_url(page):
+    parse = urlparse(page.url)
+    job_id = parse.path.split("/")[-1]
+    assert job_id[0] == "~"
+    assert job_id[1:].isdigit()
+    return f"https://www.upwork.com/jobs/{job_id}"
+
 
 def scrape_jobs(page, max_jobs=20):
 
@@ -97,7 +104,7 @@ def scrape_jobs(page, max_jobs=20):
                 description_locator(page).wait_for(timeout=5000)
             with suppress(TimeoutError):
                 locator_client(page).wait_for(timeout=5000)
-            url = get_url(page)
+            url = get_job_url(page)
             title = title_text(page)
             description = description_text(page)
             print(url)

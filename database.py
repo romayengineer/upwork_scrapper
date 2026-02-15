@@ -63,3 +63,16 @@ def get_all_jobs():
     rows = cursor.fetchall()
     conn.close()
     return rows
+
+def update_url():
+    jobs = get_all_jobs()
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    for job in jobs:
+        url = job[0]
+        job_id = url.split("/")[-1]
+        new_url = f"https://www.upwork.com/jobs/{job_id}"
+        print(url, new_url)
+        cursor.execute("UPDATE jobs SET url = ? WHERE url = ?", (new_url, url))
+    conn.commit()
+    conn.close()
