@@ -54,38 +54,65 @@ def login(page):
     print("Login successful!")
 
 
-def scrape_jobs(page, max_jobs=10):
+class Incomplete(Exception):
+    pass
+
+def locator_client(page):
+    return page.locator('h5:has-text("About the client")').first
+
+def description_locator(page):
+    return page.locator('div[data-test="Description Description"]').first
+
+def description_text(page):
+    return description_locator(page).inner_text(timeout=5000)
+
+def title_locator(page):
+    for e in page.locator('h4').all():
+        text = e.inner_text(timeout=5000)
+        if "Featured" not in text:
+            return e
+    raise Incomplete("no title found")
+
+def title_text(page):
+    return title_locator(page).inner_text()
+
+
+def get_url(page):
+    # page url changes on every click of the article
+    parse = urlparse(page.url)
+    return f"{parse.scheme}://{parse.netloc}{parse.path}"
+
+
+def scrape_jobs(page, max_jobs=20):
 
     jobs = []
     job_cards = page.locator('article[data-test="JobTile"]').all()[:max_jobs]
 
-    for idx, card in enumerate(job_cards):
+    for card in job_cards:
         try:
             card.click()
-            page.locator('h4 > span').nth(1).wait_for(timeout=5000)
-            page.locator('div[data-test="Description Description"]').first.wait_for(timeout=5000)
-            page.locator('h5:has-text("About the client")').wait_for(timeout=5000)
-            # page url changes on every click of the article
-            parse = urlparse(page.url)
-            url = f"{parse.scheme}://{parse.netloc}{parse.path}"
-            title = page.locator('h4 > span').nth(1).inner_text()
-            description = page.locator('div[data-test="Description Description"]').first.inner_text()
+            with suppress(TimeoutError, Incomplete):
+                title_locator(page).wait_for(timeout=5000)
+            with suppress(TimeoutError):
+                description_locator(page).wait_for(timeout=5000)
+            with suppress(TimeoutError):
+                locator_client(page).wait_for(timeout=5000)
+            url = get_url(page)
+            title = title_text(page)
+            description = description_text(page)
             print(url)
             print(title)
-            # print(description)
             print()
-            page.keyboard.press("Escape")
-
             job_data = {
                 "url": url,
                 "title": title,
                 "description": description,
             }
             jobs.append(job_data)
-            print(f"Scraped job {idx + 1}: {title[:50]}...")
-
-        except Exception as e:
-            print(f"Error scraping job {idx + 1}: {e}")
+            page.keyboard.press("Escape")
+        except (TimeoutError, Incomplete) as e:
+            print(f"Error scraping job: {e}")
+            page.keyboard.press("Escape")
             continue
 
     return jobs
@@ -117,13 +144,14 @@ def main():
         print(f"Navigating to jobs page (max {max_jobs} jobs)...")
         page.goto(f"{UPWORK_URL}/nx/search/jobs/?q=python")
 
+        saved_count = 0
+
         while True:
             try:
-                page.locator('article[data-test="JobTile"]').first.wait_for(timeout=10000)
+                page.locator('article[data-test="JobTile"]').first.wait_for(timeout=5000)
 
                 jobs = scrape_jobs(page)
 
-                saved_count = 0
                 for job in jobs:
                     if save_job(job):
                         saved_count += 1
@@ -132,7 +160,7 @@ def main():
                 # click next
                 page.locator('li.air3-pagination-item').nth(1).click()
 
-                print(f"\nScraping complete! Saved {saved_count} new jobs to database.")
+                print(f"\nSaved {saved_count} new jobs to database.")
             except TimeoutError as e:
                 print(f"Error during scraping: {e}")
 
