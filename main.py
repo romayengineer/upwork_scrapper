@@ -157,7 +157,8 @@ async def open_browser_and_search(keyword):
             page = await context.new_page()
 
         await login(page)
-        await scrap_pages(page, keyword)
+        # await scrap_pages(page, keyword)
+        await scrap_pages_multiple(context, keyword)
 
 
 async def search_and_scrap():
@@ -235,6 +236,37 @@ async def scrap_pages(page, keyword):
     await loop_over_pages(page, keyword, search_func, goto_search_page)
 
     print(f"search for {keyword} finished\n")
+
+
+async def pool_of_pages(context, count: int):
+    pages = list(context.pages)
+
+    create = count - len(pages)
+    if create <= 0:
+        return pages[:count]
+    
+    for _ in range(create):
+        page = await context.new_page()
+        pages.append(page)
+
+    return pages[:count]
+
+
+async def scrap_pages_multiple(context, keyword):
+    pages = await pool_of_pages(context, 2)
+
+    page_number=1
+
+    while pages:
+        page = await pages.pop()
+
+        await goto_search_page(page, keyword, page_number)
+
+        await search_func(page, page_number)
+
+        page_number += 1
+
+        await pages.append(page)
 
 
 if __name__ == "__main__":
