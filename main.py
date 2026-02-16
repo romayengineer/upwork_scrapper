@@ -143,10 +143,10 @@ def main():
 
 def search_and_scrap(page):
 
-        keywords = config.SEARCH_KEYWORDS
+    keywords = config.SEARCH_KEYWORDS
 
-        for keyword in keywords:
-            scrap_pages(page, keyword)
+    for keyword in keywords:
+        scrap_pages(page, keyword)
 
 
 def goto_search_page(page, keyword, page_number=1):
