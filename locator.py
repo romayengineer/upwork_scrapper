@@ -33,19 +33,20 @@ def select_google_account(page):
     return page.locator(f'div[data-email="{config.UPWORK_EMAIL}"]')
 
 
-def client(page):
+async def client(page):
     return page.locator('h5:has-text("About the client")').first
 
 
-def title(page):
-    for e in page.locator("h4").all():
-        text = e.inner_text(timeout=5000)
+async def title(page):
+    titles = await page.locator("h4").all()
+    for e in titles:
+        text = await e.inner_text(timeout=5000)
         if "Featured" not in text:
             return e
     raise Incomplete("no title found")
 
 
-def description(page):
+async def description(page):
     return page.locator('div[data-test="Description Description"]').first
 
 
