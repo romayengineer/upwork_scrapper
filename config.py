@@ -21,4 +21,7 @@ CLUSTER_COUNT = int(os.getenv("CLUSTER_COUNT"))
 
 MAX_PAGE_NUMBER = int(os.getenv("MAX_PAGE_NUMBER"))
 
+SEARCH_KEYWORDS = os.getenv("SEARCH_KEYWORDS")
+SEARCH_KEYWORDS = [] if SEARCH_KEYWORDS is None else SEARCH_KEYWORDS.split(",")
+
 DB_PATH = Path(__file__).parent / "jobs.db"

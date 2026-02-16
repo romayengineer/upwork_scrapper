@@ -39,7 +39,7 @@ def login(page):
         locator.button_login_google(page).click()
         new_page = popup_info.value
         try:
-            locator.input_email(new_page).wait_for(timeout=20000)
+            locator.input_email(new_page).wait_for(timeout=10000)
             locator.input_email(new_page).fill(config.UPWORK_EMAIL, timeout=5000)
             new_page.get_by_text("Siguiente").click()
             locator.input_password(new_page).wait_for(timeout=5000)
@@ -127,7 +127,7 @@ def main():
         context = p.chromium.launch_persistent_context(
             channel="chrome",
             headless=False,
-            user_data_dir=config.USER_DATA_DIE,
+            user_data_dir=config.USER_DATA_DIR,
             args=[
                 "--disable-blink-features=AutomationControlled",
                 "--disable-infobars",
@@ -138,10 +138,21 @@ def main():
         page = context.new_page()
 
         login(page)
+        search_and_scrap(page)
 
+
+def search_and_scrap(page):
+
+        keywords = config.SEARCH_KEYWORDS
+
+        for keyword in keywords:
+            scrap_pages(page, keyword)
+
+
+def scrap_pages(page, keyword):
         max_jobs = 10
         print(f"Navigating to jobs page (max {max_jobs} jobs)...")
-        page.goto(f"{config.SEARCH_URL}/?q=python")
+        page.goto(f"{config.SEARCH_URL}/?q={keyword}")
 
         saved_count = 0
 
@@ -150,7 +161,7 @@ def main():
                 page_num = get_page_number(page)
 
                 if page_num and page_num >= config.MAX_PAGE_NUMBER + 1:
-                    print("process finished")
+                    print(f"search for {keyword} finished")
                     return
 
                 locator.jobs(page).first.wait_for(timeout=20000)
