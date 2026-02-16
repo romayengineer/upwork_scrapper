@@ -159,6 +159,9 @@ async def open_browser_and_search(keyword):
 
         await login(page)
 
+        # sleep 5 seconds before opening pages
+        await asyncio.sleep(5)
+
         if config.PROCESS_IN_PARALLEL:
             await scrap_pages_multiple(context, keyword)
         else:
@@ -270,6 +273,8 @@ async def scrap_pages_multiple(context, keyword):
             page_number = await work_queue.get()
             page = await page_queue.get()
             try:
+                # sleep 5 seconds on each search page
+                await asyncio.sleep(5)
                 await goto_search_page(page, keyword, page_number)
                 await search_func(page, page_number)
             finally:
