@@ -21,6 +21,7 @@ def init_db():
     """)
     conn.commit()
     conn.close()
+    print("Database initialized.\n")
 
 
 def save_job(job_data: dict):

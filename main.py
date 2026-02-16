@@ -19,12 +19,12 @@ def login(page):
         print("Error: Please set config.UPWORK_PASSWORD in .env file")
         sys.exit(1)
 
-    print("Logging in to Upwork...")
+    print("Logging in to Upwork...\n")
 
     page.goto(config.LOGIN_URL)
     if page.url != config.LOGIN_URL:
         locator.profile(page).wait_for(timeout=20000)
-        print("already login")
+        print("already login\n")
         return
 
     locator.button_continue(page).wait_for(timeout=5000)
@@ -52,7 +52,7 @@ def login(page):
 
     locator.profile(page).wait_for(timeout=20000)
 
-    print("Login successful!")
+    print("Login successful!\n")
 
 
 def title_text(page):
@@ -122,7 +122,10 @@ def get_page_number(page):
 
 def main():
     init_db()
-    print("Database initialized.")
+    search_and_scrap()
+
+
+def open_browser_and_search(keyword):
 
     with sync_playwright() as p:
         context = p.chromium.launch_persistent_context(
@@ -135,18 +138,21 @@ def main():
                 "--disable-dev-shm-usage",
             ],
         )
-        page = context.new_page()
+        if context.pages:
+            page = context.pages[0]
+        else:
+            page = context.new_page()
 
         login(page)
-        search_and_scrap(page)
+        scrap_pages(page, keyword)
 
 
-def search_and_scrap(page):
+def search_and_scrap():
 
     keywords = config.SEARCH_KEYWORDS
 
     for keyword in keywords:
-        scrap_pages(page, keyword)
+        open_browser_and_search(keyword)
 
 
 def goto_search_page(page, keyword, page_number=1):
@@ -163,11 +169,18 @@ def loop_over_pages(page, keyword, search_func, next_page_func):
 
     while True:
         try:
+            # wait for jobs to show
             locator.jobs(page).first.wait_for(timeout=20000)
 
             # extract page details
             search_func(page, page_num)
 
+            # check page number before going to next page
+            if page_num and page_num >= config.MAX_PAGE_NUMBER:
+                print("reached maximum page number\n")
+                break
+
+            # go to next page
             next_page_func(page, keyword, page_num + 1)
 
             # wait before checking page parameter if page number
@@ -175,20 +188,17 @@ def loop_over_pages(page, keyword, search_func, next_page_func):
             # instead of returning 404
             sleep(5)
 
+            # check if page number increased
             new_page_num = get_page_number(page) or 1
 
             if new_page_num <= page_num:
-                print(f"page number did not increase")
+                print(f"page number did not increase\n")
                 break
 
             page_num = new_page_num
 
-            if page_num and page_num >= config.MAX_PAGE_NUMBER + 1:
-                print("reached maximum page number")
-                break
-
         except TimeoutError as e:
-            print(f"Error during scraping: {e}")
+            print(f"Error during scraping: {e}\n")
 
     return page_num
 
@@ -202,7 +212,7 @@ def search_func(page, page_num):
         if save_job(job):
             saved_count += 1
 
-    print(f"\nPage {page_num} Saved {saved_count} new jobs to database.\n")
+    print(f"Page {page_num} Saved {saved_count} new jobs to database.\n")
 
 
 def scrap_pages(page, keyword):
@@ -212,7 +222,7 @@ def scrap_pages(page, keyword):
 
     loop_over_pages(page, keyword, search_func, goto_search_page)
 
-    print(f"search for {keyword} finished")
+    print(f"search for {keyword} finished\n")
 
 
 if __name__ == "__main__":
