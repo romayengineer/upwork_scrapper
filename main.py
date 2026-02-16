@@ -134,7 +134,6 @@ def main():
                 "--disable-dev-shm-usage",
             ],
         )
-        # context = browser.new_context()
         page = context.new_page()
 
         login(page)
@@ -149,36 +148,56 @@ def search_and_scrap(page):
             scrap_pages(page, keyword)
 
 
+def loop_over_pages(page, keyword, search_func):
+    page_num = 1
+
+    while True:
+        try:
+            locator.jobs(page).first.wait_for(timeout=20000)
+
+            # extract page details
+            search_func(page, page_num)
+
+            locator.button_next(page).wait_for(timeout=5000)
+            # click next
+            locator.button_next(page).click()
+
+            new_page_num = get_page_number(page) or 1
+
+            if new_page_num <= page_num:
+                print(f"page number did not increase")
+                break
+
+            page_num = new_page_num
+
+            if page_num and page_num >= config.MAX_PAGE_NUMBER + 1:
+                print(f"search for {keyword} finished")
+                break
+
+        except TimeoutError as e:
+            print(f"Error during scraping: {e}")
+
+    return page_num
+
+
+def search_func(page, page_num):
+    saved_count = 0
+
+    jobs = scrape_jobs(page)
+
+    for job in jobs:
+        if save_job(job):
+            saved_count += 1
+
+    print(f"\nPage {page_num} Saved {saved_count} new jobs to database.\n")
+
+
 def scrap_pages(page, keyword):
-        max_jobs = 10
-        print(f"Navigating to jobs page (max {max_jobs} jobs)...")
-        page.goto(f"{config.SEARCH_URL}/?q={keyword}")
+    print(f"searching for jobs '{keyword}'\n")
 
-        saved_count = 0
+    page.goto(f"{config.SEARCH_URL}/?q={keyword}")
 
-        while True:
-            try:
-                page_num = get_page_number(page)
-
-                if page_num and page_num >= config.MAX_PAGE_NUMBER + 1:
-                    print(f"search for {keyword} finished")
-                    return
-
-                locator.jobs(page).first.wait_for(timeout=20000)
-
-                jobs = scrape_jobs(page)
-
-                for job in jobs:
-                    if save_job(job):
-                        saved_count += 1
-
-                locator.button_next(page).wait_for(timeout=5000)
-                # click next
-                locator.button_next(page).click()
-
-                print(f"\nPage {page_num} Saved {saved_count} new jobs to database.")
-            except TimeoutError as e:
-                print(f"Error during scraping: {e}")
+    loop_over_pages(page, keyword, search_func)
 
 
 if __name__ == "__main__":
