@@ -27,7 +27,7 @@ def login(page):
         print("already login\n")
         return
 
-    locator.button_continue(page).wait_for(timeout=5000)
+    locator.button_continue(page).wait_for(timeout=20000)
 
     is_gmail = config.UPWORK_EMAIL.lower().endswith("@gmail.com")
     if is_gmail is False:
@@ -128,9 +128,10 @@ def main():
 def open_browser_and_search(keyword):
 
     with sync_playwright() as p:
+        print(f"open browser in headless mode = '{config.BROWSER_HEADLESS}'")
         context = p.chromium.launch_persistent_context(
             channel="chrome",
-            headless=False,
+            headless=config.BROWSER_HEADLESS,
             user_data_dir=config.USER_DATA_DIR,
             args=[
                 "--disable-blink-features=AutomationControlled",

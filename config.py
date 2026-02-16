@@ -24,4 +24,7 @@ MAX_PAGE_NUMBER = int(os.getenv("MAX_PAGE_NUMBER"))
 SEARCH_KEYWORDS = os.getenv("SEARCH_KEYWORDS")
 SEARCH_KEYWORDS = [] if SEARCH_KEYWORDS is None else SEARCH_KEYWORDS.split(",")
 
+BROWSER_HEADLESS = os.getenv("BROWSER_HEADLESS", "true")
+BROWSER_HEADLESS = BROWSER_HEADLESS.lower() == "true"
+
 DB_PATH = Path(__file__).parent / "jobs.db"
