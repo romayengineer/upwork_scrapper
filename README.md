@@ -4,12 +4,16 @@ A Python project that uses Playwright to scrape job posts from Upwork, stores th
 
 ## Features
 
+- **Async Playwright**: Fully async implementation for better performance
+- **Parallel Processing**: Run multiple pages concurrently using worker pools
+- **Page Pool Queue**: Reusable pool of pages for concurrent scraping
+- **Session Persistence**: Saves login state to reuse on subsequent runs
 - **Automated Job Scraping**: Scrapes job posts from Upwork with title, URL, and description
 - **Google SSO Login**: Automated login via Gmail (upwork.com/@gmail.com accounts)
 - **Multiple Keywords**: Search multiple keywords in a single run
 - **Pagination Support**: Automatically navigates through multiple pages (configurable limit)
 - **Optimization**: Skips already processed jobs to avoid duplicates
-- **Stealth Browser**: Uses existing Chrome profile to avoid bot detection
+- **Stealth Browser**: Uses Chrome with stealth arguments to avoid bot detection
 - **Headless Mode**: Configurable browser mode (headless or visible)
 - **Word Frequency Analysis**: Count and analyze common words across all jobs
 - **Job Clustering**: Auto-categorize jobs using sentence embeddings and machine learning
@@ -18,7 +22,6 @@ A Python project that uses Playwright to scrape job posts from Upwork, stores th
 
 - Python 3.10+
 - Google Chrome browser installed
-- Chrome profile for login (to avoid bot detection)
 
 ## Setup
 
@@ -57,33 +60,36 @@ Create a `.env` file with:
 |----------|-------------|----------|
 | `UPWORK_EMAIL` | Your Upwork email (@gmail.com only) | Yes |
 | `UPWORK_PASSWORD` | Your Upwork password | Yes |
-| `USER_DATA_DIR` | Path to Chrome profile | Yes |
 | `CLUSTER_COUNT` | Number of clusters for job categorization | Yes |
 | `MAX_PAGE_NUMBER` | Maximum number of pages to scrape per keyword | Yes |
 | `SEARCH_KEYWORDS` | Comma-separated keywords to search (e.g., "python,javascript") | Yes |
 | `BROWSER_HEADLESS` | Run browser in headless mode (true/false, default: true) | No |
-
-**To get Chrome profile path on macOS:**
-```bash
-ls ~/Library/Application\ Support/Google/Chrome/
-```
-Use a path like:
-```
-/Users/yourname/Library/Application Support/Google/Chrome/Default
-```
+| `PROCESS_IN_PARALLEL` | Enable parallel page processing (true/false, default: false) | No |
+| `PAGES_IN_PARALLEL` | Number of pages to use in parallel (default: 2) | No |
+| `STORAGE_STATE_PATH` | Path to store login session (default: storage_state.json) | No |
 
 ## Usage
 
-### Scrape Jobs
+### Scrape Jobs (Sequential - Single Page)
 ```bash
 python main.py
 ```
 - Opens Chrome (headless or visible based on config)
 - Logs in via Google SSO if not already logged in
+- Saves login session to `storage_state.json` for reuse
 - Iterates through all keywords in `SEARCH_KEYWORDS`
 - For each keyword, navigates through pages until `MAX_PAGE_NUMBER` is reached
 - Skips already processed jobs (optimization feature)
 - Stores jobs in `jobs.db`
+
+### Scrape Jobs (Parallel - Multiple Pages)
+Set `PROCESS_IN_PARALLEL=true` in your `.env` file to enable parallel processing:
+```bash
+python main.py
+```
+- Uses a pool of pages (configurable via `PAGES_IN_PARALLEL`, default 2)
+- Each worker processes different page numbers concurrently
+- Work queue manages page numbers, page queue manages available pages
 
 ### Word Frequency Analysis
 ```bash
@@ -125,7 +131,7 @@ The `jobs` table contains:
 
 ```
 .
-├── main.py           # Job scraping script
+├── main.py           # Job scraping script (async)
 ├── config.py         # Centralized configuration
 ├── locator.py        # Page element locators
 ├── database.py       # SQLite database operations
@@ -135,8 +141,24 @@ The `jobs` table contains:
 ├── .env              # Environment variables (credentials)
 ├── .env.example      # Example environment file
 ├── jobs.db           # SQLite database (created on first run)
+├── storage_state.json # Saved login session (generated on first run)
 └── README.md         # This file
 ```
+
+## Parallel Processing Architecture
+
+The scraper uses two async queues:
+
+1. **Work Queue**: Contains page numbers to process (1, 2, 3, ..., MAX_PAGE_NUMBER)
+2. **Page Queue**: Contains available browser pages from the pool
+
+**Worker Pattern:**
+```
+[Worker 1] -> get page_number from work_queue -> get page from page_queue -> do work -> return page to page_queue
+[Worker 2] -> get page_number from work_queue -> get page from page_queue -> do work -> return page to page_queue
+```
+
+This allows true concurrent processing - both workers can process different pages simultaneously.
 
 ## Stealth Features
 
@@ -144,7 +166,12 @@ The browser launches with these arguments to avoid detection:
 - `--disable-blink-features=AutomationControlled` - Hides automation flags
 - `--disable-infobars` - Removes automation warning banner
 - `--disable-dev-shm-usage` - Better stability
-- Uses persistent Chrome context with existing user profile
+
+## Session Persistence
+
+- On first run, after successful login, the session is saved to `storage_state.json`
+- Subsequent runs load this file to skip login
+- To force re-login, delete the `storage_state.json` file
 
 ## Optimization Features
 
@@ -161,9 +188,4 @@ The browser launches with these arguments to avoid detection:
 - Press `Escape` to close job details popup after each scrape
 - Scraping stops after reaching `MAX_PAGE_NUMBER` pages per keyword
 - Multiple keywords are processed sequentially in one run
-
-## Performance
-
-- ~6 minutes for 10 pages (without optimization)
-- With optimization (skipping processed jobs), it can be 4x faster
-- Time varies based on network speed, page load times, and number of duplicates
+- Use `PROCESS_IN_PARALLEL=true` to enable concurrent page processing
