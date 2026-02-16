@@ -78,10 +78,10 @@ def get_job_url(page):
     return f"{config.JOBS_URL}/{job_id}"
 
 
-def optimization_skip_processed(card):
-    job_id = card.get_attribute("data-ev-job-uid")
+async def optimization_skip_processed(card):
+    job_id = await card.get_attribute("data-ev-job-uid")
     if not job_id:
-        job_id = card.get_attribute("data-test-key")
+        job_id = await card.get_attribute("data-test-key")
     # this job id is truncated add ~02 at the beginning
     job_id = f"~02{job_id}"
     if job := get_job_by_id(job_id):
@@ -94,7 +94,8 @@ async def scrape_jobs(page):
 
     for card in job_cards:
         try:
-            if job := optimization_skip_processed(card):
+            job = await optimization_skip_processed(card)
+            if job:
                 print(f"job alredy processed {job[1]}")
                 continue
             await card.click()
@@ -157,8 +158,11 @@ async def open_browser_and_search(keyword):
             page = await context.new_page()
 
         await login(page)
-        # await scrap_pages(page, keyword)
-        await scrap_pages_multiple(context, keyword)
+
+        if config.PROCESS_IN_PARALLEL:
+            await scrap_pages_multiple(context, keyword)
+        else:
+            await scrap_pages(page, keyword)
 
 
 async def search_and_scrap():
@@ -238,35 +242,46 @@ async def scrap_pages(page, keyword):
     print(f"search for {keyword} finished\n")
 
 
-async def pool_of_pages(context, count: int):
+async def pool_of_pages(context, count: int) -> asyncio.Queue:
     pages = list(context.pages)
 
     create = count - len(pages)
-    if create <= 0:
-        return pages[:count]
-    
-    for _ in range(create):
-        page = await context.new_page()
-        pages.append(page)
+    if create > 0:
+        for _ in range(create):
+            page = await context.new_page()
+            pages.append(page)
 
-    return pages[:count]
+    queue = asyncio.Queue(maxsize=count)
+    for page in pages[:count]:
+        await queue.put(page)
+
+    return queue
 
 
 async def scrap_pages_multiple(context, keyword):
-    pages = await pool_of_pages(context, 2)
+    page_queue = await pool_of_pages(context, config.PAGES_IN_PARALLEL)
+    work_queue = asyncio.Queue()
 
-    page_number=1
+    for page_number in range(1, config.MAX_PAGE_NUMBER + 1):
+        await work_queue.put(page_number)
 
-    while pages:
-        page = await pages.pop()
+    async def worker(worker_id: int):
+        while True:
+            page_number = await work_queue.get()
+            page = await page_queue.get()
+            try:
+                await goto_search_page(page, keyword, page_number)
+                await search_func(page, page_number)
+            finally:
+                await page_queue.put(page)
+                work_queue.task_done()
 
-        await goto_search_page(page, keyword, page_number)
+    workers = [asyncio.create_task(worker(i)) for i in range(page_queue.maxsize)]
+    await work_queue.join()
 
-        await search_func(page, page_number)
-
-        page_number += 1
-
-        await pages.append(page)
+    for task in workers:
+        task.cancel()
+    await asyncio.gather(*workers, return_exceptions=True)
 
 
 if __name__ == "__main__":

@@ -29,4 +29,9 @@ SEARCH_KEYWORDS = [] if SEARCH_KEYWORDS is None else SEARCH_KEYWORDS.split(",")
 BROWSER_HEADLESS = os.getenv("BROWSER_HEADLESS", "true")
 BROWSER_HEADLESS = BROWSER_HEADLESS.lower() == "true"
 
+PROCESS_IN_PARALLEL = os.getenv("PROCESS_IN_PARALLEL", "true")
+PROCESS_IN_PARALLEL = PROCESS_IN_PARALLEL.lower() == "true"
+
+PAGES_IN_PARALLEL = int(os.getenv("PAGES_IN_PARALLEL"))
+
 DB_PATH = Path(__file__).parent / "jobs.db"
