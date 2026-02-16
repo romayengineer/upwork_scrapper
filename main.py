@@ -3,7 +3,7 @@ import config
 import locator
 from time import sleep
 from contextlib import suppress
-from database import init_db, save_job
+from database import init_db, save_job, get_job_by_id
 from playwright._impl._errors import TimeoutError
 from playwright.sync_api import sync_playwright
 from urllib.parse import urlparse, parse_qs
@@ -74,7 +74,17 @@ def get_job_url(page):
     job_id = parse.path.split("/")[-1]
     assert job_id[0] == "~"
     assert job_id[1:].isdigit()
-    return f"https://www.upwork.com/jobs/{job_id}"
+    return f"{config.JOBS_URL}/{job_id}"
+
+
+def optimization_skip_processed(card):
+    job_id = card.get_attribute("data-ev-job-uid")
+    if not job_id:
+        job_id = card.get_attribute("data-test-key")
+    # this job id is truncated add ~02 at the beginning
+    job_id = f"~02{job_id}"
+    if job := get_job_by_id(job_id):
+        return job[0]
 
 
 def scrape_jobs(page, max_jobs=20):
@@ -84,6 +94,9 @@ def scrape_jobs(page, max_jobs=20):
 
     for card in job_cards:
         try:
+            if job := optimization_skip_processed(card):
+                print(f"job alredy processed {job[1]}")
+                continue
             card.click()
             with suppress(TimeoutError, locator.Incomplete):
                 locator.title(page).wait_for(timeout=5000)

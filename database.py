@@ -64,6 +64,16 @@ def get_all_jobs():
     return rows
 
 
+def get_job_by_id(job_id):
+    conn = sqlite3.connect(config.DB_PATH)
+    cursor = conn.cursor()
+    url = f"{config.JOBS_URL}/{job_id}"
+    cursor.execute("SELECT * FROM jobs where url = ? LIMIT 1", (url,))
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
+
+
 def update_url():
     jobs = get_all_jobs()
     conn = sqlite3.connect(config.DB_PATH)

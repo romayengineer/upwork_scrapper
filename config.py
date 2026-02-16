@@ -11,6 +11,8 @@ LOGIN_URL = f"{UPWORK_URL}/ab/account-security/login"
 
 SEARCH_URL = f"{UPWORK_URL}/nx/search/jobs"
 
+JOBS_URL = f"{UPWORK_URL}/jobs"
+
 UPWORK_EMAIL = os.getenv("UPWORK_EMAIL")
 
 UPWORK_PASSWORD = os.getenv("UPWORK_PASSWORD")

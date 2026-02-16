@@ -150,5 +150,6 @@ The browser launches with these arguments to avoid detection:
 
 ## Performance
 
-- ~6 minutes for 10 pages
+- ~6 minutes for 10 pages (without optmization)
+- with optmization it goes 4x faster ~6 minutes for 40 pages
 - Time varies based on network speed and page load times
