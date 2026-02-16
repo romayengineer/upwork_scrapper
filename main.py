@@ -1,6 +1,7 @@
 import sys
 import config
 import locator
+from time import sleep
 from contextlib import suppress
 from database import init_db, save_job
 from playwright._impl._errors import TimeoutError
@@ -148,7 +149,16 @@ def search_and_scrap(page):
             scrap_pages(page, keyword)
 
 
-def loop_over_pages(page, keyword, search_func):
+def goto_search_page(page, keyword, page_number=1):
+    page.goto(f"{config.SEARCH_URL}/?q={keyword}&page={page_number}")
+
+
+def click_next_page(page, keyword, new_page_num):
+    locator.button_next(page).wait_for(timeout=5000)
+    locator.button_next(page).click()
+
+
+def loop_over_pages(page, keyword, search_func, next_page_func):
     page_num = 1
 
     while True:
@@ -158,9 +168,12 @@ def loop_over_pages(page, keyword, search_func):
             # extract page details
             search_func(page, page_num)
 
-            locator.button_next(page).wait_for(timeout=5000)
-            # click next
-            locator.button_next(page).click()
+            next_page_func(page, keyword, page_num + 1)
+
+            # wait before checking page parameter if page number
+            # does not exist then it will change from number to infinity
+            # instead of returning 404
+            sleep(5)
 
             new_page_num = get_page_number(page) or 1
 
@@ -171,7 +184,7 @@ def loop_over_pages(page, keyword, search_func):
             page_num = new_page_num
 
             if page_num and page_num >= config.MAX_PAGE_NUMBER + 1:
-                print(f"search for {keyword} finished")
+                print("reached maximum page number")
                 break
 
         except TimeoutError as e:
@@ -195,9 +208,11 @@ def search_func(page, page_num):
 def scrap_pages(page, keyword):
     print(f"searching for jobs '{keyword}'\n")
 
-    page.goto(f"{config.SEARCH_URL}/?q={keyword}")
+    goto_search_page(page, keyword, page_number=1)
 
-    loop_over_pages(page, keyword, search_func)
+    loop_over_pages(page, keyword, search_func, goto_search_page)
+
+    print(f"search for {keyword} finished")
 
 
 if __name__ == "__main__":
