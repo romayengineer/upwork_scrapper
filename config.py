@@ -34,4 +34,9 @@ PROCESS_IN_PARALLEL = PROCESS_IN_PARALLEL.lower() == "true"
 
 PAGES_IN_PARALLEL = int(os.getenv("PAGES_IN_PARALLEL"))
 
+STORAGE_STATE_PATH = Path(os.getenv("STORAGE_STATE_PATH", "storage_state.json"))
+if not STORAGE_STATE_PATH.exists():
+    with open(STORAGE_STATE_PATH, "w") as f:
+        f.write("{}")
+
 DB_PATH = Path(__file__).parent / "jobs.db"

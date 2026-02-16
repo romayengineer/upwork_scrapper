@@ -142,22 +142,23 @@ async def main():
 async def open_browser_and_search(keyword):
     async with async_playwright() as p:
         print(f"open browser in headless mode = '{config.BROWSER_HEADLESS}'")
-        context = await p.chromium.launch_persistent_context(
+
+        browser = await p.chromium.launch(
             channel="chrome",
             headless=config.BROWSER_HEADLESS,
-            user_data_dir=config.USER_DATA_DIR,
             args=[
                 "--disable-blink-features=AutomationControlled",
                 "--disable-infobars",
                 "--disable-dev-shm-usage",
             ],
         )
-        if context.pages:
-            page = context.pages[0]
-        else:
-            page = await context.new_page()
+        context = await browser.new_context(
+            storage_state=config.STORAGE_STATE_PATH
+        )
+        page = await context.new_page()
 
         await login(page)
+        await context.storage_state(path=str(config.STORAGE_STATE_PATH))
 
         # sleep 5 seconds before opening pages
         await asyncio.sleep(5)
@@ -166,6 +167,9 @@ async def open_browser_and_search(keyword):
             await scrap_pages_multiple(context, keyword)
         else:
             await scrap_pages(page, keyword)
+
+        await context.close()
+        await browser.close()
 
 
 async def search_and_scrap():
