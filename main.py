@@ -172,8 +172,8 @@ async def goto_search_page(page, keyword, page_number=1):
 
 
 async def click_next_page(page, keyword, new_page_num):
-    await locator.button_next(page).wait_for(timeout=5000)
-    await locator.button_next(page).click()
+    await (await locator.button_next(page)).wait_for(timeout=5000)
+    await (await locator.button_next(page)).click()
 
 
 async def loop_over_pages(page, keyword, search_func, next_page_func):
