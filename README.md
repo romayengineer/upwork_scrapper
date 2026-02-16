@@ -6,8 +6,11 @@ A Python project that uses Playwright to scrape job posts from Upwork, stores th
 
 - **Automated Job Scraping**: Scrapes job posts from Upwork with title, URL, and description
 - **Google SSO Login**: Automated login via Gmail (upwork.com/@gmail.com accounts)
+- **Multiple Keywords**: Search multiple keywords in a single run
 - **Pagination Support**: Automatically navigates through multiple pages (configurable limit)
+- **Optimization**: Skips already processed jobs to avoid duplicates
 - **Stealth Browser**: Uses existing Chrome profile to avoid bot detection
+- **Headless Mode**: Configurable browser mode (headless or visible)
 - **Word Frequency Analysis**: Count and analyze common words across all jobs
 - **Job Clustering**: Auto-categorize jobs using sentence embeddings and machine learning
 
@@ -56,7 +59,9 @@ Create a `.env` file with:
 | `UPWORK_PASSWORD` | Your Upwork password | Yes |
 | `USER_DATA_DIR` | Path to Chrome profile | Yes |
 | `CLUSTER_COUNT` | Number of clusters for job categorization | Yes |
-| `MAX_PAGE_NUMBER` | Maximum number of pages to scrape | Yes |
+| `MAX_PAGE_NUMBER` | Maximum number of pages to scrape per keyword | Yes |
+| `SEARCH_KEYWORDS` | Comma-separated keywords to search (e.g., "python,javascript") | Yes |
+| `BROWSER_HEADLESS` | Run browser in headless mode (true/false, default: true) | No |
 
 **To get Chrome profile path on macOS:**
 ```bash
@@ -73,10 +78,11 @@ Use a path like:
 ```bash
 python main.py
 ```
-- Opens Chrome with your existing profile
+- Opens Chrome (headless or visible based on config)
 - Logs in via Google SSO if not already logged in
-- Searches for "python" jobs
-- Navigates through pages automatically until `MAX_PAGE_NUMBER` is reached
+- Iterates through all keywords in `SEARCH_KEYWORDS`
+- For each keyword, navigates through pages until `MAX_PAGE_NUMBER` is reached
+- Skips already processed jobs (optimization feature)
 - Stores jobs in `jobs.db`
 
 ### Word Frequency Analysis
@@ -121,6 +127,7 @@ The `jobs` table contains:
 .
 ├── main.py           # Job scraping script
 ├── config.py         # Centralized configuration
+├── locator.py        # Page element locators
 ├── database.py       # SQLite database operations
 ├── count.py          # Word frequency analysis
 ├── cluster.py        # Job clustering with ML
@@ -139,17 +146,24 @@ The browser launches with these arguments to avoid detection:
 - `--disable-dev-shm-usage` - Better stability
 - Uses persistent Chrome context with existing user profile
 
+## Optimization Features
+
+- **Duplicate Prevention**: Uses `get_job_by_id()` to check if job already exists before scraping
+- **Skip Processed Jobs**: The `optimization_skip_processed()` function extracts job ID from the card element and skips if found in database
+- **Delay Between Pages**: 5-second delay to prevent rate limiting
+
 ## Notes
 
 - Currently only supports Gmail/Google SSO login
-- Browser runs in non-headless mode using your Chrome profile
-- Default search query is "python" (hardcoded in main.py)
+- Browser runs in headless mode by default (configurable via `BROWSER_HEADLESS`)
+- Default search keywords must be configured in `.env`
 - The scraper clicks each job tile to get the full URL (Upwork loads details dynamically)
 - Press `Escape` to close job details popup after each scrape
-- Scraping stops after reaching `MAX_PAGE_NUMBER` pages
+- Scraping stops after reaching `MAX_PAGE_NUMBER` pages per keyword
+- Multiple keywords are processed sequentially in one run
 
 ## Performance
 
-- ~6 minutes for 10 pages (without optmization)
-- with optmization it goes 4x faster ~6 minutes for 40 pages
-- Time varies based on network speed and page load times
+- ~6 minutes for 10 pages (without optimization)
+- With optimization (skipping processed jobs), it can be 4x faster
+- Time varies based on network speed, page load times, and number of duplicates
